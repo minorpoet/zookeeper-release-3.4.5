@@ -97,6 +97,7 @@ public class QuorumPeerMain {
         throws ConfigException, IOException
     {
         QuorumPeerConfig config = new QuorumPeerConfig();
+        // 如果命令行参数只传入一个，表示传入的是配置文件 zoo.cfg
         if (args.length == 1) {
             config.parse(args[0]);
         }
@@ -108,11 +109,13 @@ public class QuorumPeerMain {
         purgeMgr.start();
 
         if (args.length == 1 && config.servers.size() > 0) {
+            //采用zoo.cfg配置文件 集群模式启动
             runFromConfig(config);
         } else {
             LOG.warn("Either no config or no quorum defined in config, running "
                     + " in standalone mode");
             // there is only server in the quorum -- run as standalone
+            // 如果启动参数不止一个，表示传入了具体的参数来启动单机模式
             ZooKeeperServerMain.main(args);
         }
     }
@@ -126,10 +129,12 @@ public class QuorumPeerMain {
   
       LOG.info("Starting quorum peer");
       try {
+          // 网络连接工厂
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
                                 config.getMaxClientCnxns());
-  
+
+          // 一个 QuorumPeer 代表一个 zk 节点
           quorumPeer = new QuorumPeer();
           quorumPeer.setClientPortAddress(config.getClientPortAddress());
           quorumPeer.setTxnFactory(new FileTxnSnapLog(
@@ -145,10 +150,15 @@ public class QuorumPeerMain {
           quorumPeer.setSyncLimit(config.getSyncLimit());
           quorumPeer.setQuorumVerifier(config.getQuorumVerifier());
           quorumPeer.setCnxnFactory(cnxnFactory);
+          // ZKDatabase 内存数据库 存储session、datatree和log等
           quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
+          // 是否参加选举 或只是个 observer节点
           quorumPeer.setLearnerType(config.getPeerType());
-  
+
+          // 启动节点
           quorumPeer.start();
+          // 等待线程执行完 QuorumPeer是线程子类，其实 QuorumPeer的 run 正常情况下不会退出
+          // 这里就避免退出main方法
           quorumPeer.join();
       } catch (InterruptedException e) {
           // warn, but generally this is ok

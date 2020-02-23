@@ -406,9 +406,13 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     
     @Override
     public synchronized void start() {
+        // 加载磁盘文件、日志、快照到内存数据库
         loadDataBase();
-        cnxnFactory.start();        
+        // 建立网络连接
+        cnxnFactory.start();
+        // ！！！开始leader选举咯
         startLeaderElection();
+        // 线程启动 run()，QuorumPeer 本身就是个线程
         super.start();
     }
 
