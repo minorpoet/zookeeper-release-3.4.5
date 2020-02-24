@@ -467,6 +467,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     }
     synchronized public void startLeaderElection() {
     	try {
+    	    // 投票信息, {节点id  myid， 之前的事务id， 当前纪元/朝代 epoch}
     		currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
     	} catch(IOException e) {
     		RuntimeException re = new RuntimeException(e.getMessage());
@@ -482,6 +483,9 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         if (myQuorumAddr == null) {
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
+
+        // zk内部的选举类型，0位udp不可靠通信的方式，已经废弃了
+        // electionType默认为3，为 QuorumPeerConfig.electionAlg
         if (electionType == 0) {
             try {
                 udpSocket = new DatagramSocket(myQuorumAddr.getPort());
@@ -571,6 +575,13 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 this, new ZooKeeperServer.BasicDataTreeBuilder(), this.zkDb));
     }
 
+    /**
+     * 选举算法, FastLeaderElection
+     * 其他的都废弃了
+     *
+     * @param electionAlgorithm
+     * @return
+     */
     protected Election createElectionAlgorithm(int electionAlgorithm){
         Election le=null;
                 
@@ -589,6 +600,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             qcm = new QuorumCnxManager(this);
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
+                // 启动listener，监听其他机器发送过来的请求
                 listener.start();
                 le = new FastLeaderElection(this, qcm);
             } else {
