@@ -690,8 +690,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
 
                         // Create read-only server but don't start it immediately
                         final ReadOnlyZooKeeperServer roZk = new ReadOnlyZooKeeperServer(
-                                logFactory, this,
-                                new ZooKeeperServer.BasicDataTreeBuilder(),
+                                logFactory, this, new ZooKeeperServer.BasicDataTreeBuilder(),
                                 this.zkDb);
     
                         // Instead of starting roZk immediately, wait some grace
