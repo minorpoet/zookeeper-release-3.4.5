@@ -122,6 +122,9 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         public LearnerType type = LearnerType.PARTICIPANT;
     }
 
+    /**
+     * 节点状态
+     */
     public enum ServerState {
         LOOKING, FOLLOWING, LEADING, OBSERVING;
     }
@@ -408,11 +411,11 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     public synchronized void start() {
         // 加载磁盘文件、日志、快照到内存数据库
         loadDataBase();
-        // 建立网络连接
+        // 服务端开启网络监听，如 netty的 ServerBootStrap 或原生nio的 selector
         cnxnFactory.start();
-        // ！！！开始leader选举咯
+        // 准备选举算法 FastLeaderElection, 开始选举
         startLeaderElection();
-        // 线程启动 run()，QuorumPeer 本身就是个线程
+        // 启动线程 （QuorumPeer本身是个线程） 运行主逻辑 run()
         super.start();
     }
 
@@ -587,6 +590,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 
         //TODO: use a factory rather than a switch
         switch (electionAlgorithm) {
+            // 0、1、2都废弃了
         case 0:
             le = new LeaderElection(this);
             break;
@@ -597,6 +601,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             le = new AuthFastLeaderElection(this, true);
             break;
         case 3:
+            // tcp的连接管理器，负责和其他节点通信
             qcm = new QuorumCnxManager(this);
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
@@ -649,6 +654,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 cnxnFactory.getLocalAddress());
 
         LOG.debug("Starting quorum peer");
+        // 注册jmx监听
         try {
             jmxQuorumBean = new QuorumBean(this);
             MBeanRegistry.getInstance().register(jmxQuorumBean, null);
@@ -679,6 +685,11 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         try {
             /*
              * Main loop
+             * QuorumPeer主逻辑的无限循环，根据当前状态进行不同的处理
+             * (1) LOOKING 选举中
+             * (2) OBSERVING 连接并观察Leader节点 同步数据，不参与选举
+             * (3) FOLLOWING 作为 follower 跟随 Leader节点，参与事务和同步数据
+             * (4) LEADING 自己是 leader 节点, 负责发起事务 同步数据给followers和observers
              */
             while (running) {
                 switch (getPeerState()) {
@@ -690,17 +701,18 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
 
                         // Create read-only server but don't start it immediately
                         final ReadOnlyZooKeeperServer roZk = new ReadOnlyZooKeeperServer(
-                                logFactory, this, new ZooKeeperServer.BasicDataTreeBuilder(),
+                                logFactory, this,
+                                new ZooKeeperServer.BasicDataTreeBuilder(),
                                 this.zkDb);
-    
-                        // Instead of starting roZk immediately, wait some grace
-                        // period before we decide we're partitioned.
-                        //
-                        // Thread is used here because otherwise it would require
-                        // changes in each of election strategy classes which is
-                        // unnecessary code coupling.
-                        Thread roZkMgr = new Thread() {
-                            public void run() {
+
+                                // Instead of starting roZk immediately, wait some grace
+                                // period before we decide we're partitioned.
+                                //
+                                // Thread is used here because otherwise it would require
+                                // changes in each of election strategy classes which is
+                                // unnecessary code coupling.
+                                Thread roZkMgr = new Thread() {
+                                    public void run() {
                                 try {
                                     // lower-bound grace period to 2 secs
                                     sleep(Math.max(2000, tickTime));
