@@ -413,7 +413,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         loadDataBase();
         // 服务端开启网络监听，如 netty的 ServerBootStrap 或原生nio的 selector
         cnxnFactory.start();
-        // 准备选举算法 FastLeaderElection, 开始选举
+        // 准备选举算法 FastLeaderElection
         startLeaderElection();
         // 启动线程 （QuorumPeer本身是个线程） 运行主逻辑 run()
         super.start();
@@ -696,6 +696,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 case LOOKING:
                     LOG.info("LOOKING");
 
+                    // 看系统环境变量是否为只读模式，默认是否
                     if (Boolean.getBoolean("readonlymode.enabled")) {
                         LOG.info("Attempting to start ReadOnlyZooKeeperServer");
 
@@ -740,6 +741,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                         }
                     } else {
                         try {
+                            // 开始选举 makeLEStrategy() 获取的就是QuorumPeeer线程 start() 时候准备的 FastLeaderElection算法
+                            // lookForLeader 进行leader选举
                             setCurrentVote(makeLEStrategy().lookForLeader());
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);
