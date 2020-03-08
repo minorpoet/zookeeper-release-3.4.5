@@ -411,7 +411,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     public synchronized void start() {
         // 加载磁盘文件、日志、快照到内存数据库
         loadDataBase();
-        // 服务端开启网络监听，如 netty的 ServerBootStrap 或原生nio的 selector
+        // 服务端开启网络监听, 默认是 NIOServerCnxnFactory 原生nio方式， 也可以配置成 netty的 NettyServerCnxnFactory
+        //todo 这个和 QuorumCnxManager.Listener 的工作重复了？
         cnxnFactory.start();
         // 准备选举算法 FastLeaderElection
         startLeaderElection();
@@ -590,7 +591,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 
         //TODO: use a factory rather than a switch
         switch (electionAlgorithm) {
-            // 0、1、2都废弃了
+            // u、1、2都废弃了
         case 0:
             le = new LeaderElection(this);
             break;

@@ -732,7 +732,7 @@ public class FastLeaderElection implements Election {
         try {
             // 接收到的选票
             HashMap<Long, Vote> recvset = new HashMap<Long, Vote>();
-
+            // 选举结束后的通知， 投票通知中节点状态不是 Looking
             HashMap<Long, Vote> outofelection = new HashMap<Long, Vote>();
 
             int notTimeout = finalizeWait;
@@ -766,6 +766,7 @@ public class FastLeaderElection implements Election {
                  * Otherwise processes new notification.
                  */
                 if(n == null){
+                    //todo 为什么要 多发一次通知?
                     if(manager.haveDelivered()){
                         sendNotifications();
                     } else {

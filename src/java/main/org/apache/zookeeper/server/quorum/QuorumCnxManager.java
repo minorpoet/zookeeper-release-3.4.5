@@ -98,6 +98,11 @@ public class QuorumCnxManager {
      * Mapping from Peer to Thread number
      */
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
+
+    /**
+     * 消息发送队列 map， <节点id, 消息队列>
+     * 用来维护准备给各个节点发送的消息
+     */
     final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
 
@@ -176,6 +181,7 @@ public class QuorumCnxManager {
         DataOutputStream dout = null;
         try {
             // Sending id and challenge
+            // 将自己的id发送出去
             dout = new DataOutputStream(sock.getOutputStream());
             dout.writeLong(self.getId());
             dout.flush();
@@ -202,6 +208,7 @@ public class QuorumCnxManager {
                 vsw.finish();
             
             senderWorkerMap.put(sid, sw);
+            // 为每个节点（已建立连接），分配一个发送队列
             if (!queueSendMap.containsKey(sid)) {
                 queueSendMap.put(sid, new ArrayBlockingQueue<ByteBuffer>(
                         SEND_CAPACITY));
@@ -349,12 +356,14 @@ public class QuorumCnxManager {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Opening channel to server " + sid);
                 }
+                // 直接就是用jdk 最原始的bio建立连接
                 Socket sock = new Socket();
                 setSockOpts(sock);
                 sock.connect(self.getView().get(sid).electionAddr, cnxTO);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Connected to server " + sid);
                 }
+                // 初始化连接，将自己的id发送过去 并启动消息发送工作线程和消息接收工作线程
                 initiateConnection(sock, sid);
             } catch (UnresolvedAddressException e) {
                 // Sun doesn't include the address that causes this
@@ -465,6 +474,7 @@ public class QuorumCnxManager {
 
     /**
      * Thread to listen on some port
+     * 负责监听端口，接收其他节点建立连接的请求
      */
     public class Listener extends Thread {
 
