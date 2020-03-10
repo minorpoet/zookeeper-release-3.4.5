@@ -413,6 +413,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         loadDataBase();
         // 服务端开启网络监听, 默认是 NIOServerCnxnFactory 原生nio方式， 也可以配置成 netty的 NettyServerCnxnFactory
         //todo 这个和 QuorumCnxManager.Listener 的工作重复了？
+        // 没有重复，QuorumCnxManager.Listener 直接bio socket的连接是用来在节点之间同步数据和选举用的
+        // 而 ServerCnxnFactory 是负责处理客户端连接的
         cnxnFactory.start();
         // 准备选举算法 FastLeaderElection
         startLeaderElection();
