@@ -515,7 +515,7 @@ public class FastLeaderElection implements Election {
 
     /**
      * Send notifications to all peers upon a change in our vote
-     * 将自己的投票通知给其他所有节点
+     * 将自己当前的投票通知给其他所有节点
      */
     private void sendNotifications() {
         // 筛选出参与选举的节点
@@ -526,7 +526,7 @@ public class FastLeaderElection implements Election {
             ToSend notmsg = new ToSend(ToSend.mType.notification,
                     proposedLeader,
                     proposedZxid,
-                    logicalclock,
+                    logicalclock, // 当前投票周期
                     QuorumPeer.ServerState.LOOKING,
                     sid,
                     proposedEpoch);
@@ -766,10 +766,11 @@ public class FastLeaderElection implements Election {
                  * Otherwise processes new notification.
                  */
                 if(n == null){
-                    //todo 为什么要 多发一次通知?
+                    // 如果待发送队列中有一个为空，则重新发送通知
                     if(manager.haveDelivered()){
                         sendNotifications();
                     } else {
+                        // 和所有节点建立拦截
                         manager.connectAll();
                     }
 
@@ -788,6 +789,7 @@ public class FastLeaderElection implements Election {
                     switch (n.state) {
                     case LOOKING:
                         // If notification > current, replace and send messages out
+                        // 如果接收到的投票周期比自己的大， 说明已经进入下一轮选举了 替换自己的投票然后发消息出去
                         if (n.electionEpoch > logicalclock) {
                             logicalclock = n.electionEpoch;
                             recvset.clear();
@@ -803,14 +805,18 @@ public class FastLeaderElection implements Election {
 
                             // 将自己新的投票通知给其他节点
                             sendNotifications();
-                        } else if (n.electionEpoch < logicalclock) {
+                        }
+                        // 如果接收到的投票周期小于自己的，则忽略
+                        else if (n.electionEpoch < logicalclock) {
                             if(LOG.isDebugEnabled()){
                                 LOG.debug("Notification election epoch is smaller than logicalclock. n.electionEpoch = 0x"
                                         + Long.toHexString(n.electionEpoch)
                                         + ", logicalclock=0x" + Long.toHexString(logicalclock));
                             }
                             break;
-                        } else if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
+                        }
+                        // 处于同一轮投票，对投票进行pk后更新自己的选择，再把自己新的投票通知出去
+                        else if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
                                 proposedLeader, proposedZxid, proposedEpoch)) {
                             updateProposal(n.leader, n.zxid, n.peerEpoch);
                             sendNotifications();

@@ -192,6 +192,7 @@ public class QuorumCnxManager {
         }
         
         // If lost the challenge, then drop the new connection
+        // 为了避免节点之间重复建立连接， 只允许和比自己sid小的节点建立连接
         if (sid > self.getId()) {
             LOG.info("Have smaller server identifier, so dropping the " +
                      "connection: (" + sid + ", " + self.getId() + ")");
@@ -255,6 +256,7 @@ public class QuorumCnxManager {
         }
         
         //If wins the challenge, then close the new connection.
+        // 只接收 sid 比自己大的节点 连接建立请求
         if (sid < self.getId()) {
             /*
              * This replica might still believe that the connection to sid is
@@ -401,6 +403,7 @@ public class QuorumCnxManager {
 
     /**
      * Check if all queues are empty, indicating that all messages have been delivered.
+     * 待发送队列中map中一个队列为空
      */
     boolean haveDelivered() {
         for (ArrayBlockingQueue<ByteBuffer> queue : queueSendMap.values()) {
