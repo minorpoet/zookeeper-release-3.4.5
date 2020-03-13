@@ -832,7 +832,7 @@ public class FastLeaderElection implements Election {
                         // 将其他节点的投票放入一个set中
                         recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
 
-                        // 判断是否有足够（过半）的节点选定同一个投票，最终确定 leader
+                        // 判断是否有足够（过半）的节点和自己选定同一个投票，达成一致 选定leader
                         if (termPredicate(recvset,
                                 new Vote(proposedLeader, proposedZxid,
                                         logicalclock, proposedEpoch))) {
@@ -874,6 +874,8 @@ public class FastLeaderElection implements Election {
                         /*
                          * Consider all notifications from the same epoch
                          * together.
+                         * 如果在本轮投票中，有节点已经确认结果了，则结合已收到的投票判断是否能得出结果
+                         * 如果结果一致，则更新自己的状态 返回最终选票
                          */
                         if(n.electionEpoch == logicalclock){
                             recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
@@ -892,6 +894,9 @@ public class FastLeaderElection implements Election {
                         /**
                          * Before joining an established ensemble, verify that
                          * a majority are following the same leader.
+                         *
+                         * 走到这里，表示当前节点是后面加入集群的，
+                         * 非选举的集合outofelection判断是否大多数（过半） 的节点都跟随着同一个 leader
                          */
                         outofelection.put(n.sid, new Vote(n.leader, n.zxid,
                                 n.electionEpoch, n.peerEpoch, n.state));
