@@ -302,6 +302,8 @@ public class Leader {
                         // in LearnerHandler switch to the syncLimit
                         s.setSoTimeout(self.tickTime * self.initLimit);
                         s.setTcpNoDelay(nodelay);
+                        // follower 和 observer 都是learner， 对于每个连接上来的节点
+                        // 都对应一个 LearnerHandler 负责处理
                         LearnerHandler fh = new LearnerHandler(s, Leader.this);
                         fh.start();
                     } catch (SocketException e) {
@@ -357,6 +359,7 @@ public class Leader {
 
             // Start thread that waits for connection requests from 
             // new followers.
+            // 开启 ServerSocket，等待followers和obsevers 的连接
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
             

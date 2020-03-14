@@ -239,6 +239,8 @@ public class LearnerHandler extends Thread {
             oa = BinaryOutputArchive.getArchive(bufferedOutput);
 
             QuorumPacket qp = new QuorumPacket();
+            // 这边序列化协议用的 apache.jute
+            // 类似netty里边的 $ 符号, 这边用 "packet" 作为分隔符来解决粘包和拆包的问题
             ia.readRecord(qp, "packet");
             if(qp.getType() != Leader.FOLLOWERINFO && qp.getType() != Leader.OBSERVERINFO){
             	LOG.error("First packet " + qp.toString()
