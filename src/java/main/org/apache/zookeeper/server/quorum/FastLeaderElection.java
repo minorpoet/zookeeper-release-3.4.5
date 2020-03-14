@@ -212,6 +212,8 @@ public class FastLeaderElection implements Election {
                          * an observer. If we ever have any other type of
                          * learner in the future, we'll have to change the
                          * way we check for observers.
+                         *
+                         * 如果接收到 observer 节点的消息， 则直接将自己当前的投票通知出去
                          */
                         if(!self.getVotingView().containsKey(response.sid)){
                             Vote current = self.getCurrentVote();
@@ -284,8 +286,10 @@ public class FastLeaderElection implements Election {
 
                             /*
                              * If this server is looking, then send proposed leader
+                             *  接收到其他节点的通知，先判断自己所处的状态
+                             *  1. 如果自己也在选举中，则放入接手队列中
+                             *     1.1 如果对方投票所处的选举周期小于自己的，则用自己的选举周期把那个投票给重新发出去
                              */
-
                             if(self.getPeerState() == QuorumPeer.ServerState.LOOKING){
                                 recvqueue.offer(n);
 
@@ -293,6 +297,8 @@ public class FastLeaderElection implements Election {
                                  * Send a notification back if the peer that sent this
                                  * message is also looking and its logical clock is
                                  * lagging behind.
+                                 * 如果消息发送的那个节点 发过来的投票周期比当前节点的小 则升级那个选票周期为当前节点的投票周期logicalclock 再发回给那个节点
+                                 * todo why?
                                  */
                                 if((ackstate == QuorumPeer.ServerState.LOOKING)
                                         && (n.electionEpoch < logicalclock)){
@@ -310,6 +316,8 @@ public class FastLeaderElection implements Election {
                                 /*
                                  * If this server is not looking, but the one that sent the ack
                                  * is looking, then send back what it believes to be the leader.
+                                 * 2. 如果当前节点已经不再是 Looking 状态，也就是自己选举完毕了，就把自己认为是 leader 的当前投票通知给消息发送节点
+                                 * 这种情况就不用把收到的投票信息 放入 recvqueue 中
                                  */
                                 Vote current = self.getCurrentVote();
                                 if(ackstate == QuorumPeer.ServerState.LOOKING){
