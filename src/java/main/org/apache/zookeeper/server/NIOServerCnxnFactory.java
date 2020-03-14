@@ -85,15 +85,17 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
     @Override
     public void configure(InetSocketAddress addr, int maxcc) throws IOException {
         configureSaslLogin();
-
+        // 自己本身实现了 Runnable
         thread = new Thread(this, "NIOServerCxn.Factory:" + addr);
         thread.setDaemon(true);
         maxClientCnxns = maxcc;
         this.ss = ServerSocketChannel.open();
         ss.socket().setReuseAddress(true);
         LOG.info("binding to port " + addr);
+        // 绑定端口地址
         ss.socket().bind(addr);
         ss.configureBlocking(false);
+        // 监听 op_accept 事件，接收客户端连接
         ss.register(selector, SelectionKey.OP_ACCEPT);
     }
 
@@ -182,8 +184,10 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                 }
                 ArrayList<SelectionKey> selectedList = new ArrayList<SelectionKey>(
                         selected);
+                // 随机洗一下，避免一直按一个顺序处理客户端连接
                 Collections.shuffle(selectedList);
                 for (SelectionKey k : selectedList) {
+                    // 客户端的连接请求
                     if ((k.readyOps() & SelectionKey.OP_ACCEPT) != 0) {
                         SocketChannel sc = ((ServerSocketChannel) k
                                 .channel()).accept();
@@ -197,13 +201,17 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                             LOG.info("Accepted socket connection from "
                                      + sc.socket().getRemoteSocketAddress());
                             sc.configureBlocking(false);
+                            // 将接收到的客户端连接注册到 selector，监听 op_read 读事件
                             SelectionKey sk = sc.register(selector,
                                     SelectionKey.OP_READ);
+                            // 将连接相关信息附加到对应的 selectKey 中，方便后续read/write获取
                             NIOServerCnxn cnxn = createConnection(sc, sk);
                             sk.attach(cnxn);
                             addCnxn(cnxn);
                         }
-                    } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                    }
+                    // 客户端的读/写请求
+                    else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
                         NIOServerCnxn c = (NIOServerCnxn) k.attachment();
                         c.doIO(k);
                     } else {
