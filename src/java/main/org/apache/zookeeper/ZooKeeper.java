@@ -573,11 +573,11 @@ public class ZooKeeper {
         throws IOException
     {
         LOG.info("Initiating client connection, connectString=" + connectString
-                + " sessionTimeout=" + sessionTimeout
-                + " watcher=" + watcher
-                + " sessionId=" + Long.toHexString(sessionId)
-                + " sessionPasswd="
-                + (sessionPasswd == null ? "<null>" : "<hidden>"));
+            + " sessionTimeout=" + sessionTimeout
+            + " watcher=" + watcher
+            + " sessionId=" + Long.toHexString(sessionId)
+            + " sessionPasswd="
+            + (sessionPasswd == null ? "<null>" : "<hidden>"));
 
         watchManager.defaultWatcher = watcher;
 

@@ -1039,10 +1039,14 @@ public class ClientCnxn {
                                         + Long.toHexString(sessionId));
                     }
                     if (state.isConnected()) {
+                        // 发送ping心跳
+                        // 判断最近一次发送请求的时间到当前时刻是否超过 读超时时间的一半，如果是则发送一次 ping（有点类似netty的心跳）
                         int timeToNextPing = readTimeout / 2
                                 - clientCnxnSocket.getIdleSend();
                         if (timeToNextPing <= 0) {
+                            //发送个ping消息， 类型为OpCode.ping，只有 RequestHeader 消息头
                             sendPing();
+                            // 更新最近消息发送时间戳
                             clientCnxnSocket.updateLastSend();
                         } else {
                             if (timeToNextPing < to) {
@@ -1108,6 +1112,7 @@ public class ClientCnxn {
             }
             cleanup();
             clientCnxnSocket.close();
+            // 退出无线循环，断开连接后 产生一个Disonnected 的 watcher事件
             if (state.isAlive()) {
                 eventThread.queueEvent(new WatchedEvent(Event.EventType.None,
                         Event.KeeperState.Disconnected, null));
