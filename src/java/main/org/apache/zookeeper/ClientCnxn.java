@@ -990,6 +990,7 @@ public class ClientCnxn {
                         if (closing || !state.isAlive()) {
                             break;
                         }
+                        // 开始连接
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }

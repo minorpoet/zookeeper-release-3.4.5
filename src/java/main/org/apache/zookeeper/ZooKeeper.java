@@ -128,10 +128,13 @@ public class ZooKeeper {
      * API.
      */
     private static class ZKWatchManager implements ClientWatchManager {
+        // 监听节点数据变化
         private final Map<String, Set<Watcher>> dataWatches =
             new HashMap<String, Set<Watcher>>();
+        // 监听节点存在是否还存在
         private final Map<String, Set<Watcher>> existWatches =
             new HashMap<String, Set<Watcher>>();
+        // 监听节点子元素
         private final Map<String, Set<Watcher>> childWatches =
             new HashMap<String, Set<Watcher>>();
 
@@ -438,12 +441,17 @@ public class ZooKeeper {
         LOG.info("Initiating client connection, connectString=" + connectString
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
+        // 这个watcher用来监听连接的状态变化
         watchManager.defaultWatcher = watcher;
-
+        // 解析连接字符串，如 127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002
+        // 可以在连接字符串最后加上路径作为 根路径, 127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a
+        // 那么这个客户端所有的操作都在 /app/a 之下进行，类似命名空间的区分作用
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
+        // 这里边随机打乱多个zk节点地址的顺序，相当于随机获取一个地址，这样能保证客户端连接能较为平衡的分散到各个服务节点
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+        // 和服务端节点建立连接
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);

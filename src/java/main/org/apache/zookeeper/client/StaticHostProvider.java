@@ -69,6 +69,7 @@ public final class StaticHostProvider implements HostProvider {
             throw new IllegalArgumentException(
                     "A HostProvider may not be empty!");
         }
+        // 随机打乱多个zk服务节点地址的顺序
         Collections.shuffle(this.serverAddresses);
     }
 

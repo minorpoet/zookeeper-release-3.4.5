@@ -207,6 +207,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                             // 将连接相关信息附加到对应的 selectKey 中，方便后续read/write获取
                             NIOServerCnxn cnxn = createConnection(sc, sk);
                             sk.attach(cnxn);
+                            // 把客户端连接添加到连接 cnxns 集合和 ipMap 中
                             addCnxn(cnxn);
                         }
                     }
