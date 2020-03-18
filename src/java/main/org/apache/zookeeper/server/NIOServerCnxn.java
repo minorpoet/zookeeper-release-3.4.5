@@ -68,8 +68,14 @@ public class NIOServerCnxn extends ServerCnxn {
 
     boolean initialized;
 
+    // 4个字节的buffer，用来读取每个请求的消息体长度
     ByteBuffer lenBuffer = ByteBuffer.allocate(4);
-
+    // 对每个连接只有一个 incomingBuffer
+    // 如果一次请求没有读取完毕，那么在下次 op_read 的时候会继续读到这里边
+    // 最开始incomingBuffer 赋值为 lenBuffer 是为了读取请求体长度，
+    // 然后根据这个长度 incomingBuffer = ByteBuffer.allocate(len) 重新分配缓冲区大小
+    // 然后不断读取数据知道缓冲区满后处理请求， 并重置 incomingBuffer = lenBuffer 开始读取下一个请求体长度
+    // 这样通过消息长度和缓冲区的方式解决了 粘包和拆包问题
     ByteBuffer incomingBuffer = lenBuffer;
 
     LinkedBlockingQueue<ByteBuffer> outgoingBuffers = new LinkedBlockingQueue<ByteBuffer>();
@@ -183,6 +189,7 @@ public class NIOServerCnxn extends ServerCnxn {
 
     /** Read the request payload (everything following the length prefix) */
     private void readPayload() throws IOException, InterruptedException {
+        // 如果还没读取完毕，则继续读取
         if (incomingBuffer.remaining() != 0) { // have we read length bytes?
             int rc = sock.read(incomingBuffer); // sock is non-blocking, so ok
             if (rc < 0) {
@@ -192,7 +199,7 @@ public class NIOServerCnxn extends ServerCnxn {
                         + ", likely client has closed socket");
             }
         }
-
+        // 如果读取完毕，则可以对请求做进一步的处理
         if (incomingBuffer.remaining() == 0) { // have we read length bytes?
             packetReceived();
             incomingBuffer.flip();
@@ -202,6 +209,7 @@ public class NIOServerCnxn extends ServerCnxn {
                 readRequest();
             }
             lenBuffer.clear();
+            // 完整读取完一起请求后，重置 incomingBuffer 为lenBuffer 下次再次先读取一个请求的长度
             incomingBuffer = lenBuffer;
         }
     }
@@ -215,6 +223,7 @@ public class NIOServerCnxn extends ServerCnxn {
                 return;
             }
             if (k.isReadable()) {
+                // 从 SocketChannel 中读
                 int rc = sock.read(incomingBuffer);
                 if (rc < 0) {
                     throw new EndOfStreamException(
@@ -222,16 +231,21 @@ public class NIOServerCnxn extends ServerCnxn {
                             + Long.toHexString(sessionId)
                             + ", likely client has closed socket");
                 }
+                // 如果缓冲区读满了，表示完整地读取到4个字节的数据长度/消息体
+                // 或者说上次发生了 拆包，这次才读取完毕
                 if (incomingBuffer.remaining() == 0) {
                     boolean isPayload;
+                    // 在读取完毕一个请求后，incomingBuffer 又会被重置为数据长度lenBuffer ，表示开始读取下一个请求
                     if (incomingBuffer == lenBuffer) { // start of next request
                         incomingBuffer.flip();
+                        // 获取到数据长度后，incomingBuffer = ByteBuffer.allocate(len);
                         isPayload = readLength(k);
                         incomingBuffer.clear();
                     } else {
                         // continuation
                         isPayload = true;
                     }
+                    // 读取消息体
                     if (isPayload) { // not the case for 4letterword
                         readPayload();
                     }
