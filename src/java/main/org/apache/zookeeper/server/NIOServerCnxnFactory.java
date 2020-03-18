@@ -213,6 +213,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory implements Runnable 
                     }
                     // 客户端的读/写请求
                     else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                        // 从selectedKey中获取连接建立时附加进去的session对象 执行io操作
                         NIOServerCnxn c = (NIOServerCnxn) k.attachment();
                         c.doIO(k);
                     } else {

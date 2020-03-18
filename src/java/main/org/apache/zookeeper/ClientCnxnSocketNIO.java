@@ -64,6 +64,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
+        // 有消息可以读, 一般是发送给服务端消息后的响应 或者 事件通知
         if (sockKey.isReadable()) {
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
@@ -98,6 +99,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
+        // 如果当前 SocketChannel 可以向外写数据了
         if (sockKey.isWritable()) {
             synchronized(outgoingQueue) {
                 Packet p = findSendablePacket(outgoingQueue,
@@ -114,7 +116,9 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         }
                         p.createBB();
                     }
+                    // 将数据写出去
                     sock.write(p.bb);
+                    // 处理拆包，数据没有一次性发送完全, 则不会执行下面代码块的逻辑 不会从outgoingqueue 中移除
                     if (!p.bb.hasRemaining()) {
                         sentCount++;
                         outgoingQueue.removeFirstOccurrence(p);
@@ -127,6 +131,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         }
                     }
                 }
+                // 如果待发送队列为空，则取消 selectedKey 关注的op_write 避免代码不断进入到这里
                 if (outgoingQueue.isEmpty()) {
                     // No more packets to send: turn off write interest flag.
                     // Will be turned on later by a later call to enableWrite(),
@@ -355,6 +360,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             }
             // 监听到读写请求
             else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                // 执行io读写操作
                 doIO(pendingQueue, outgoingQueue, cnxn);
             }
         }

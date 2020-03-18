@@ -1069,7 +1069,8 @@ public class ClientCnxn {
                         }
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
-
+                    // 基于底层的 ClientCnxnSocket（默认是nio的 ClientCnxnSocketNIO)
+                    // 把 outgoingqueue 待发送队列的数据发出去
                     clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue, ClientCnxn.this);
                 } catch (Throwable e) {
                     if (closing) {
