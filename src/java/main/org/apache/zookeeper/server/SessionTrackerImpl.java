@@ -42,10 +42,19 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
 public class SessionTrackerImpl extends Thread implements SessionTracker {
     private static final Logger LOG = LoggerFactory.getLogger(SessionTrackerImpl.class);
 
+    /**
+     * sessionId 和session实例的映射
+     */
     HashMap<Long, SessionImpl> sessionsById = new HashMap<Long, SessionImpl>();
 
+    /**
+     * 过期时刻 和 处理过后相同过期时刻的session集合 map
+     */
     HashMap<Long, SessionSet> sessionSets = new HashMap<Long, SessionSet>();
 
+    /**
+     * sessionId 对应 过期时间的map
+     */
     ConcurrentHashMap<Long, Integer> sessionsWithTimeout;
     long nextSessionId = 0;
     long nextExpirationTime;
@@ -109,8 +118,14 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
 
     SessionExpirer expirer;
 
+    /**
+     * 过期时刻处理为 tickTime 的倍数
+     * @param time
+     * @return
+     */
     private long roundToInterval(long time) {
         // We give a one interval grace period
+        // expirationInterval 默认为tickTime=2秒
         return (time / expirationInterval + 1) * expirationInterval;
     }
 
@@ -198,11 +213,13 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
         if (s == null || s.isClosing()) {
             return false;
         }
+        // 处理 session 过期时刻 为 tickTime=2秒的倍数
         long expireTime = roundToInterval(System.currentTimeMillis() + timeout);
         if (s.tickTime >= expireTime) {
             // Nothing needs to be done
             return true;
         }
+        // 处理session到期时间，将其挪到新的分桶中
         SessionSet set = sessionSets.get(s.tickTime);
         if (set != null) {
             set.sessions.remove(s);
@@ -262,9 +279,12 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
     }
 
     synchronized public void addSession(long id, int sessionTimeout) {
+        // sessionId对应的过期时间
         sessionsWithTimeout.put(id, sessionTimeout);
         if (sessionsById.get(id) == null) {
+            // 创建session
             SessionImpl s = new SessionImpl(id, sessionTimeout, 0);
+            // 放入 sessionId 和 实例的映射中
             sessionsById.put(id, s);
             if (LOG.isTraceEnabled()) {
                 ZooTrace.logTraceMessage(LOG, ZooTrace.SESSION_TRACE_MASK,
@@ -278,6 +298,7 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
                         + Long.toHexString(id) + " " + sessionTimeout);
             }
         }
+        // 更新session的过期时刻
         touchSession(id, sessionTimeout);
     }
 
