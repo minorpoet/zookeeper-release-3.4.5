@@ -72,8 +72,32 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
         public boolean isClosing() { return isClosing; }
     }
 
+    /**
+     * 初始化sessionId 后续创建session的时候 只需要 nextSessionId++ 即可
+     * 比如当前时间戳为1584800165867
+     * 转为二进制为
+     *  0000 0000 0000 0000 0000 0001 0111 0000 1111 1101 0111 0011 0110 1111 1110 1011
+     * 左移24位 后
+     * 0001 0111 0000 1111 1101 0111 0011 0110 1111 1110 1011 0000 0000 0000 0000 0000
+     * 右移8位 后
+     * 0000 0000 0001 0111 0000 1111 1101 0111 0011 0110 1111 1110 1011 0000 0000 0000
+     * 把时间戳移动到了中间
+     *
+     * 节点id  myid = 1 的二进制
+     * 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0001
+     *  左移 id << 56
+     * 0000 0001 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+     *
+     * nextSid | id << 56
+     * 0000 0001 0001 0111 0000 1111 1101 0111 0011 0110 1111 1110 1011 0000 0000 0000
+     *
+     * 这样 session id 初始化的时候就具有 节点id 和 时间戳的特点，保证了全局唯一
+     * @param id
+     * @return
+     */
     public static long initializeNextSession(long id) {
         long nextSid = 0;
+        // 初始化 sessionId，使之同时具有节点myid和时间戳的特性，保证全局唯一
         nextSid = (System.currentTimeMillis() << 24) >> 8;
         nextSid =  nextSid | (id <<56);
         return nextSid;
@@ -99,7 +123,7 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
         this.expirationInterval = tickTime;
         this.sessionsWithTimeout = sessionsWithTimeout;
         nextExpirationTime = roundToInterval(System.currentTimeMillis());
-        this.nextSessionId = initializeNextSession(sid);
+
         for (Entry<Long, Integer> e : sessionsWithTimeout.entrySet()) {
             addSession(e.getKey(), e.getValue());
         }

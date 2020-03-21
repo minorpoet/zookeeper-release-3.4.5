@@ -204,6 +204,7 @@ public class NIOServerCnxn extends ServerCnxn {
             packetReceived();
             incomingBuffer.flip();
             if (!initialized) {
+                // 连接未初始化，读取连接请求
                 readConnectRequest();
             } else {
                 readRequest();

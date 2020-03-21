@@ -516,12 +516,15 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     }
 
     long createSession(ServerCnxn cnxn, byte passwd[], int timeout) {
+        // 利用 SessionTracker 生成sessionId
         long sessionId = sessionTracker.createSession(timeout);
         Random r = new Random(sessionId ^ superSecret);
         r.nextBytes(passwd);
         ByteBuffer to = ByteBuffer.allocate(4);
         to.putInt(timeout);
+        // 将sessionId赋值到连接类 ServerCnxn 中
         cnxn.setSessionId(sessionId);
+        // 提交session创建请求
         submitRequest(cnxn, sessionId, OpCode.createSession, 0, to, null);
         return sessionId;
     }
@@ -642,9 +645,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             }
         }
         try {
+            // 更新下session的超时时间
             touch(si.cnxn);
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
+                // 链式依次处理请求 PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();

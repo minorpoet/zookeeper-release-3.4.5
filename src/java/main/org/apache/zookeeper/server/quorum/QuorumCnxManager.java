@@ -634,6 +634,7 @@ public class QuorumCnxManager {
                 LOG.error("BufferUnderflowException ", be);
                 return;
             }
+            // [length][body]
             dout.writeInt(b.capacity());
             dout.write(b.array());
             dout.flush();

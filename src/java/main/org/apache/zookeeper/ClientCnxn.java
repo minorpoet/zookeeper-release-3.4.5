@@ -851,6 +851,7 @@ public class ClientCnxn {
                      + ", initiating session");
             isFirstConnect = false;
             long sessId = (seenRwServerBefore) ? sessionId : 0;
+            // nio连接建立完毕后，发送连接请求
             ConnectRequest conReq = new ConnectRequest(0, lastZxid,
                     sessionTimeout, sessId, sessionPasswd);
             synchronized (outgoingQueue) {
@@ -881,9 +882,11 @@ public class ClientCnxn {
                             OpCode.auth), null, new AuthPacket(0, id.scheme,
                             id.data), null, null));
                 }
+                // 把连接请求塞到待发送队列中
                 outgoingQueue.addFirst(new Packet(null, null, conReq,
                             null, null, readOnly));
             }
+            // 监听读和写事件
             clientCnxnSocket.enableReadWriteOnly();
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Session establishment request sent on "
@@ -954,7 +957,7 @@ public class ClientCnxn {
                 saslLoginFailed = true;
             }
             logStartConnect(addr);
-
+            // 和服务端建立连接
             clientCnxnSocket.connect(addr);
         }
 
@@ -990,7 +993,7 @@ public class ClientCnxn {
                         if (closing || !state.isAlive()) {
                             break;
                         }
-                        // 开始连接
+                        // 开始建立连接
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
