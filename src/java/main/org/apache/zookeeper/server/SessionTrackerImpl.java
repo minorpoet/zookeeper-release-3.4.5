@@ -181,18 +181,24 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
         try {
             while (running) {
                 currentTime = System.currentTimeMillis();
+                // 如果还没到下次检查时间，就先等待
                 if (nextExpirationTime > currentTime) {
                     this.wait(nextExpirationTime - currentTime);
                     continue;
                 }
+                // 将到期时间对应的 session 集合取出来
                 SessionSet set;
                 set = sessionSets.remove(nextExpirationTime);
                 if (set != null) {
                     for (SessionImpl s : set.sessions) {
+                        // 逐个设置session的状态为关闭
                         setSessionClosing(s.sessionId);
+                        // 提交一个  OpCode.closeSession 请求，
+                        // ZookeeperServer在finalRequestProcessor处理的时候会关闭网络连接
                         expirer.expire(s);
                     }
                 }
+                // 下一个到期时间 +2秒
                 nextExpirationTime += expirationInterval;
             }
         } catch (InterruptedException e) {
