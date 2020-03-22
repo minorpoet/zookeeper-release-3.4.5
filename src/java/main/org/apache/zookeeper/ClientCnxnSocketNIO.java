@@ -73,8 +73,10 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                                 + Long.toHexString(sessionId)
                                 + ", likely server has closed socket");
             }
+            // 处理完拆包
             if (!incomingBuffer.hasRemaining()) {
                 incomingBuffer.flip();
+                // 读取消息长度
                 if (incomingBuffer == lenBuffer) {
                     recvCount++;
                     readLength();
@@ -93,6 +95,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     updateLastHeard();
                     initialized = true;
                 } else {
+                    // 读取响应
                     sendThread.readResponse(incomingBuffer);
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
@@ -120,6 +123,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     // 将数据写出去
                     sock.write(p.bb);
                     // 处理拆包，数据没有一次性发送完全, 则不会执行下面代码块的逻辑 不会从outgoingqueue 中移除
+                    // remaining为空，表示已经发送完毕
                     if (!p.bb.hasRemaining()) {
                         sentCount++;
                         // 从待发送队列中移除

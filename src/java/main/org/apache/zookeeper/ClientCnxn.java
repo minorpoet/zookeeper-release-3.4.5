@@ -1314,6 +1314,8 @@ public class ClientCnxn {
         ReplyHeader r = new ReplyHeader();
         Packet packet = queuePacket(h, r, request, response, null, null, null,
                     null, watchRegistration);
+        // 将客户端请求加入到 待发送队列outgoingqueue之后，不断wait() 阻塞等待
+        // 直到待响应队列 pendingqueue 收到响应后，调用packge的notifyAll唤醒
         synchronized (packet) {
             while (!packet.finished) {
                 packet.wait();
@@ -1369,6 +1371,7 @@ public class ClientCnxn {
                 outgoingQueue.add(packet);
             }
         }
+        // 唤醒 selector
         sendThread.getClientCnxnSocket().wakeupCnxn();
         return packet;
     }
