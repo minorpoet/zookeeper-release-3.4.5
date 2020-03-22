@@ -1209,7 +1209,7 @@ public class ClientCnxn {
             readTimeout = negotiatedSessionTimeout * 2 / 3;
             connectTimeout = negotiatedSessionTimeout / hostProvider.size();
             hostProvider.onConnected();
-            sessionId = _sessionId;
+            sessionId = _sessionId; // 回写 sessionId
             sessionPasswd = _sessionPasswd;
             state = (isRO) ?
                     States.CONNECTEDREADONLY : States.CONNECTED;

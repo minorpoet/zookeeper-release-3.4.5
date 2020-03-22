@@ -79,6 +79,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     recvCount++;
                     readLength();
                 } else if (!initialized) {
+                    // 如果是首次发送连接请求的响应
                     readConnectResult();
                     enableRead();
                     if (findSendablePacket(outgoingQueue,
@@ -121,10 +122,12 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     // 处理拆包，数据没有一次性发送完全, 则不会执行下面代码块的逻辑 不会从outgoingqueue 中移除
                     if (!p.bb.hasRemaining()) {
                         sentCount++;
+                        // 从待发送队列中移除
                         outgoingQueue.removeFirstOccurrence(p);
                         if (p.requestHeader != null
                                 && p.requestHeader.getType() != OpCode.ping
                                 && p.requestHeader.getType() != OpCode.auth) {
+                            // 加入到待响应队列中
                             synchronized (pendingQueue) {
                                 pendingQueue.add(p);
                             }
