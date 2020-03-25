@@ -757,6 +757,7 @@ public class Leader {
         } catch (IOException e) {
             LOG.warn("This really should be impossible", e);
         }
+        //准备提案 proposal
         QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid, 
                 baos.toByteArray(), null);
         

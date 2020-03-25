@@ -649,7 +649,8 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             touch(si.cnxn);
             boolean validpacket = Request.isValid(si.type);
             if (validpacket) {
-                // 链式依次处理请求 PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
+                // 链式依次处理请求，默认是 PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
+                // 要看具体的ZookeeperServer 子类的处理链路设置， 如 LeaderZookeeperServer、FollowerZookeeperServer setupRequestProcessors()
                 firstProcessor.processRequest(si);
                 if (si.cnxn != null) {
                     incInProcess();
