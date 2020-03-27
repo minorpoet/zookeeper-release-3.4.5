@@ -331,6 +331,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 int parentCVersion = parentRecord.stat.getCversion();
                 CreateMode createMode =
                     CreateMode.fromFlag(createRequest.getFlags());
+                // 如果是创建顺序节点的话，在后面加上序号
                 if (createMode.isSequential()) {
                     path = path + String.format(Locale.ENGLISH, "%010d", parentCVersion);
                 }
@@ -363,6 +364,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 parentRecord = parentRecord.duplicate(request.hdr.getZxid());
                 parentRecord.childCount++;
                 parentRecord.stat.setCversion(newCversion);
+                // 将变更放进zookeeperServer的outstandingChanges队列中
                 addChangeRecord(parentRecord);
                 addChangeRecord(new ChangeRecord(request.hdr.getZxid(), path, s,
                         0, listACL));
