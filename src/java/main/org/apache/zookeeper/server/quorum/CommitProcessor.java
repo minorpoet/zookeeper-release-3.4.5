@@ -75,6 +75,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                 }
                 toProcess.clear();
                 synchronized (this) {
+                    // 如果请求队列 和 已提交请求队列为空 则阻塞等待
                     if ((queuedRequests.size() == 0 || nextPending != null)
                             && committedRequests.size() == 0) {
                         wait();

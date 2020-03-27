@@ -566,12 +566,13 @@ public class Leader {
                     Long.toHexString(zxid), followerAddr);
             return;
         }
-        
+        // 接收follower发来的 ack，加入到本次提案的ack集合中
         p.ackSet.add(sid);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Count for zxid: 0x{} is {}",
                     Long.toHexString(zxid), p.ackSet.size());
         }
+        // 如果超过半数 ack了
         if (self.getQuorumVerifier().containsQuorum(p.ackSet)){             
             if (zxid != lastCommitted+1) {
                 LOG.warn("Commiting zxid 0x{} from {} not first!",
@@ -587,8 +588,11 @@ public class Leader {
                 if (p.request == null) {
                     LOG.warn("Going to commmit null request for proposal: {}", p);
                 }
+                //进行阶段二 commit
                 commit(zxid);
+                //通知observer
                 inform(p);
+                // 调用CommitProcessor，将请求加入到已提交队列中
                 zk.commitProcessor.commit(p.request);
                 if(pendingSyncs.containsKey(zxid)){
                     for(LearnerSyncRequest r: pendingSyncs.remove(zxid)) {
