@@ -396,6 +396,7 @@ public class Learner {
                     Record txn = SerializeUtils.deserializeTxn(qp.getData(), hdr);
                     zk.processTxn(hdr, txn);
                     break;
+                    // 收到Leader发来的信息已同步完毕后，跳出循环
                 case Leader.UPTODATE:
                     if (!snapshotTaken) { // true for the pre v1.0 case
                         zk.takeSnapshot();
@@ -415,6 +416,7 @@ public class Learner {
         ack.setZxid(ZxidUtils.makeZxid(newEpoch, 0));
         writePacket(ack, true);
         sock.setSoTimeout(self.tickTime * self.syncLimit);
+        // follower 正式启动，开始处理client的请求
         zk.startup();
         // We need to log the stuff that came in between the snapshot and the uptodate
         if (zk instanceof FollowerZooKeeperServer) {

@@ -70,7 +70,7 @@ public class Follower extends Learner{
             try {
                 // 连接到leader
                 connectToLeader(addr);
-                // 注册到leader
+                // 注册到leader, 将自己最近的zxid 和所处的 epoch 发给leader，后续数据同步有用
                 long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
 
                 //check to see if the leader zxid is lower than ours

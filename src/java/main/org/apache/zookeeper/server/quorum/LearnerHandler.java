@@ -241,6 +241,8 @@ public class LearnerHandler extends Thread {
             QuorumPacket qp = new QuorumPacket();
             // 这边序列化协议用的 apache.jute
             ia.readRecord(qp, "packet");
+            // 收到的第一个消息 必须的follower或observer本身的信息
+            // follower.followerLeader 后 reigsterWithLeader发来的
             if(qp.getType() != Leader.FOLLOWERINFO && qp.getType() != Leader.OBSERVERINFO){
             	LOG.error("First packet " + qp.toString()
                         + " is not FOLLOWERINFO or OBSERVERINFO!");
@@ -305,6 +307,7 @@ public class LearnerHandler extends Thread {
             long zxidToSend = 0;
             long leaderLastZxid = 0;
             /** the packets that the follower needs to get updates from **/
+            // 这个表示follower最新的zxid，要从这个开始同步
             long updates = peerLastZxid;
             
             /* we are sending the diff check if we have proposals in memory to be able to 
@@ -320,7 +323,7 @@ public class LearnerHandler extends Thread {
                         +" maxCommittedLog=0x"+Long.toHexString(maxCommittedLog)
                         +" minCommittedLog=0x"+Long.toHexString(minCommittedLog)
                         +" peerLastZxid=0x"+Long.toHexString(peerLastZxid));
-
+                // leader自己已提交的
                 LinkedList<Proposal> proposals = leader.zk.getZKDatabase().getCommittedLog();
 
                 if (proposals.size() != 0) {
@@ -355,6 +358,10 @@ public class LearnerHandler extends Thread {
                                 if (firstPacket) {
                                     firstPacket = false;
                                     // Does the peer have some proposals that the leader hasn't seen yet
+                                    // 如follower或observer那边存在 leader这边不存在的提交
+                                    // 则要返回 TRUNC 消息，告诉peer要丢弃到哪里
+                                    // ps: 这种出现的情况是，原来的leader在commit还没提交出去的时候 自己就挂了，
+                                    // 在集群其他节点重新选举后，自己重新以follower的身份连接上来
                                     if (prevProposalZxid < peerLastZxid) {
                                         // send a trunc message before sending the diff
                                         packetToSend = Leader.TRUNC;                                        
@@ -368,7 +375,12 @@ public class LearnerHandler extends Thread {
                                 queuePacket(qcommit);
                             }
                         }
-                    } else if (peerLastZxid > maxCommittedLog) {
+                    }
+                    /**
+                     * 如果follower最新的zxid比 leader最大的提交还大，那么直接发一个 trunc
+                     *  消息，让follower 截断到 maxCommittedLog的位置
+                     */
+                    else if (peerLastZxid > maxCommittedLog) {
                         LOG.debug("Sending TRUNC to follower zxidToSend=0x{} updates=0x{}",
                                 Long.toHexString(maxCommittedLog),
                                 Long.toHexString(updates));
