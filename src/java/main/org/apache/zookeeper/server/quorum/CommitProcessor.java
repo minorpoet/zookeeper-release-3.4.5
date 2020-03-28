@@ -75,7 +75,10 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                 }
                 toProcess.clear();
                 synchronized (this) {
-                    // 如果请求队列 和 已提交请求队列为空 则阻塞等待
+                    // 如果是写请求
+                    // 在proposalRequestProcessor阶段还没收到过半followers的ack消息的时候，
+                    // queuedRequests不为空 nextPending为待提交的那个请求， committedRequests为空
+                    // 此时会阻塞住，相当于等待 2pc的 proposal阶段完毕，阻塞等待 commit
                     if ((queuedRequests.size() == 0 || nextPending != null)
                             && committedRequests.size() == 0) {
                         wait();
@@ -128,6 +131,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                         case OpCode.setACL:
                         case OpCode.createSession:
                         case OpCode.closeSession:
+                            //写请求，待处理未提交
                             nextPending = request;
                             break;
                         case OpCode.sync:
@@ -137,6 +141,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                                 toProcess.add(request);
                             }
                             break;
+                            // 查询类的操作 直接放到 toProcess里边去，然后交给下个 RequestProcess(FinalRequestProccesor)处理
                         default:
                             toProcess.add(request);
                         }
