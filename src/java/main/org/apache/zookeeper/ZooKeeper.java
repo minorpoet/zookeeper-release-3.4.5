@@ -129,15 +129,12 @@ public class ZooKeeper {
      */
     private static class ZKWatchManager implements ClientWatchManager {
         // 监听节点数据变化
-        private final Map<String, Set<Watcher>> dataWatches =
-            new HashMap<String, Set<Watcher>>();
+        private final Map<String, Set<Watcher>> dataWatches = new HashMap<String, Set<Watcher>>();
         // 监听节点存在是否还存在
-        private final Map<String, Set<Watcher>> existWatches =
-            new HashMap<String, Set<Watcher>>();
+        private final Map<String, Set<Watcher>> existWatches = new HashMap<String, Set<Watcher>>();
         // 监听节点子元素
-        private final Map<String, Set<Watcher>> childWatches =
-            new HashMap<String, Set<Watcher>>();
-
+        private final Map<String, Set<Watcher>> childWatches = new HashMap<String, Set<Watcher>>();
+        // 监听连接状态
         private volatile Watcher defaultWatcher;
 
         final private void addTo(Set<Watcher> from, Set<Watcher> to) {

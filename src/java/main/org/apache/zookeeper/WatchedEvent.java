@@ -28,8 +28,22 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
  *  was involved in the event.
  */
 public class WatchedEvent {
+    /**
+     * 服务端状态， 如连接建立、断开、session过期等
+     */
     final private KeeperState keeperState;
+    /**
+     * 事件类型
+     *             None (-1),
+     *             NodeCreated (1),
+     *             NodeDeleted (2),
+     *             NodeDataChanged (3),
+     *             NodeChildrenChanged (4);
+     */
     final private EventType eventType;
+    /**
+     * 路径
+     */
     private String path;
     
     /**

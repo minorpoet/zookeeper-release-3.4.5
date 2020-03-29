@@ -38,11 +38,15 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 public class WatchManager {
     private static final Logger LOG = LoggerFactory.getLogger(WatchManager.class);
 
-    private final HashMap<String, HashSet<Watcher>> watchTable =
-        new HashMap<String, HashSet<Watcher>>();
+    /**
+     * path对应的watcher集合，用来当path节点的数据发生变化的时候 触发对应的watcher
+     */
+    private final HashMap<String, HashSet<Watcher>> watchTable = new HashMap<String, HashSet<Watcher>>();
 
-    private final HashMap<Watcher, HashSet<String>> watch2Paths =
-        new HashMap<Watcher, HashSet<String>>();
+    /**
+     * watcher对应其监听的 path，当 NIOServerCnxn 和客户端的连接关闭（session失效等情况）的时候，用来清除对应在 watchTable中对应的watcher
+     */
+    private final HashMap<Watcher, HashSet<String>> watch2Paths = new HashMap<Watcher, HashSet<String>>();
 
     public synchronized int size(){
         int result = 0;

@@ -613,6 +613,7 @@ public class ClientCnxn {
     }
 
     private void finishPacket(Packet p) {
+        // 在客户端请求真正发送成功后，才去注册本地事件
         if (p.watchRegistration != null) {
             p.watchRegistration.register(p.replyHeader.getErr());
         }
@@ -1315,7 +1316,7 @@ public class ClientCnxn {
         Packet packet = queuePacket(h, r, request, response, null, null, null,
                     null, watchRegistration);
         // 将客户端请求加入到 待发送队列outgoingqueue之后，不断wait() 阻塞等待
-        // 直到待响应队列 pendingqueue 收到响应后，调用packge的notifyAll唤醒
+        // 直到待响应队列 pendingqueue 收到响应后，调用packet的notifyAll唤醒
         synchronized (packet) {
             while (!packet.finished) {
                 packet.wait();

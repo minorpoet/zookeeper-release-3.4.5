@@ -1114,6 +1114,7 @@ public class NIOServerCnxn extends ServerCnxn {
      */
     @Override
     synchronized public void process(WatchedEvent event) {
+        // xid == -1 表示此响应为通知
         ReplyHeader h = new ReplyHeader(-1, -1L, 0);
         if (LOG.isTraceEnabled()) {
             ZooTrace.logTraceMessage(LOG, ZooTrace.EVENT_DELIVERY_TRACE_MASK,
