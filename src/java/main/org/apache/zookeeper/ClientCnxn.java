@@ -453,6 +453,7 @@ public class ClientCnxn {
         }
 
         public void queueEvent(WatchedEvent event) {
+            // 非节点操作的事件，如连接断开， 只有服务端状态和上次不一致的时候才加入到事件队列
             if (event.getType() == EventType.None
                     && sessionState == event.getState()) {
                 return;
@@ -468,6 +469,11 @@ public class ClientCnxn {
             waitingEvents.add(pair);
         }
 
+        /**
+         * 将响应数据塞到 waitingEvents 中，用来处理 callback
+         *
+         * @param packet
+         */
        public void queuePacket(Packet packet) {
           if (wasKilled) {
              synchronized (waitingEvents) {
@@ -511,6 +517,7 @@ public class ClientCnxn {
 
        private void processEvent(Object event) {
           try {
+              // 处理watcher事件
               if (event instanceof WatcherSetEventPair) {
                   // each watcher will process the event
                   WatcherSetEventPair pair = (WatcherSetEventPair) event;
@@ -521,7 +528,9 @@ public class ClientCnxn {
                           LOG.error("Error while calling watcher ", t);
                       }
                   }
-              } else {
+              }
+              // 处理callback
+              else {
                   Packet p = (Packet) event;
                   int rc = 0;
                   String clientPath = p.clientPath;
@@ -618,12 +627,16 @@ public class ClientCnxn {
             p.watchRegistration.register(p.replyHeader.getErr());
         }
 
+        // 如果callback为空，表示调用的是同步api
+        // noitifyAll() 唤醒 submitRequest中的wait()
         if (p.cb == null) {
             synchronized (p) {
                 p.finished = true;
                 p.notifyAll();
             }
-        } else {
+        }
+        // 异步api，把整个packet塞到事件处理线程的 waitingEvents中
+        else {
             p.finished = true;
             eventThread.queuePacket(p);
         }
@@ -982,6 +995,8 @@ public class ClientCnxn {
             long lastPingRwServer = System.currentTimeMillis();
             while (state.isAlive()) {
                 try {
+                    // 如果最开始还未和服务端建立连接，则建立连接
+                    // 或者说向服务端发送请求异常后， 客户端自己主动断开连接的话 再重新建立连接
                     if (!clientCnxnSocket.isConnected()) {
                         if(!isFirstConnect){
                             try {

@@ -198,6 +198,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             SocketChannel sock = (SocketChannel) sockKey.channel();
             sockKey.cancel();
             try {
+                // 关闭输入流
                 sock.socket().shutdownInput();
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
@@ -205,6 +206,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
             try {
+                // 关闭输出流
                 sock.socket().shutdownOutput();
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
@@ -213,6 +215,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
             try {
+                //关闭socket
                 sock.socket().close();
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
@@ -234,6 +237,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 LOG.debug("SendThread interrupted during sleep, ignoring");
             }
         }
+        // 清理selectedKey， isConnected = false
         sockKey = null;
     }
  
