@@ -951,6 +951,7 @@ public class ClientCnxn {
                 addr = rwServerAddress;
                 rwServerAddress = null;
             } else {
+                // 随机哪一个服务节点地址
                 addr = hostProvider.next(1000);
             }
 
@@ -1119,8 +1120,10 @@ public class ClientCnxn {
                                             + ", unexpected error"
                                             + RETRY_CONN_MSG, e);
                         }
+                        //清理资源： 主动断开socket连接，清理客户端待发送队列outgoingQueue和待响应队列pendingQueue
                         cleanup();
                         if (state.isAlive()) {
+                            // 生成一个连接断开的事件，让zookeeper构造函数传入的 defaultWatcher 有机会主动重连
                             eventThread.queueEvent(new WatchedEvent(
                                     Event.EventType.None,
                                     Event.KeeperState.Disconnected,
@@ -1180,13 +1183,16 @@ public class ClientCnxn {
         }
 
         private void cleanup() {
+            // 关闭连接
             clientCnxnSocket.cleanup();
+            // 标志待响应队列中的元素 响应头为 KeeperException.Code.CONNECTIONLOSS，处理完毕后清空
             synchronized (pendingQueue) {
                 for (Packet p : pendingQueue) {
                     conLossPacket(p);
                 }
                 pendingQueue.clear();
             }
+            // 标志待发送队列中的元素 响应头为 KeeperException.Code.CONNECTIONLOSS, 处理完毕后清空
             synchronized (outgoingQueue) {
                 for (Packet p : outgoingQueue) {
                     conLossPacket(p);
