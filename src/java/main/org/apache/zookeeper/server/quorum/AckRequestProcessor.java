@@ -43,6 +43,10 @@ class AckRequestProcessor implements RequestProcessor {
     public void processRequest(Request request) {
         QuorumPeer self = leader.self;
         if(self != null)
+            // leader先把自己塞到本次proposla提案的ack结合中，
+            // 这样后续判断 ack > half 的时候 就表示有超过有半数follower响应了
+            // 如 3个节点，1个leader 2个follower
+            //    一开始 ackSet.size() 为1 ，这个时候只要有1个follower ack了 ackSet.size() > (3/2=1) 就可以进行commit了
             leader.processAck(self.getId(), request.zxid, null);
         else
             LOG.error("Null QuorumPeer");

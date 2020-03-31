@@ -377,12 +377,17 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             loadData();
         }
     }
-    
+
+    /**
+     * 正式启动 zookeeperServer
+     */
     public void startup() {        
         if (sessionTracker == null) {
             createSessionTracker();
         }
+        // 开启sessionTracker线程，定时检查session是否过期
         startSessionTracker();
+        // 建立 服务端处理责任链
         setupRequestProcessors();
 
         registerJMX();

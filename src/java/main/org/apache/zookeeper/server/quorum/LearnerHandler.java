@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
 public class LearnerHandler extends Thread {
     private static final Logger LOG = LoggerFactory.getLogger(LearnerHandler.class);
 
-    protected final Socket sock;    
+    protected final Socket sock;
 
     public Socket getSocket() {
         return sock;
@@ -312,7 +312,10 @@ public class LearnerHandler extends Thread {
             long updates = peerLastZxid;
             
             /* we are sending the diff check if we have proposals in memory to be able to 
-             * send a diff to the 
+             * send a diff to the
+             *
+             * 根据 followerInfo 带过来的follower当前最新的 zxid 来判断 是发一个差异diff 还是trunc截断给 follower，
+             * 如果是diff，把差异的proposal先塞到队列里边
              */ 
             ReentrantReadWriteLock lock = leader.zk.getZKDatabase().getLogLock();
             ReadLock rl = lock.readLock();
@@ -413,6 +416,7 @@ public class LearnerHandler extends Thread {
                 rl.unlock();
             }
 
+            // 先给follower 发送一个 Leader.NEWLEADER 类型的消息，表明正常开始新的周期了
              QuorumPacket newLeaderQP = new QuorumPacket(Leader.NEWLEADER,
                     ZxidUtils.makeZxid(newEpoch, 0), null, null);
              if (getVersion() < 0x10000) {
@@ -425,6 +429,8 @@ public class LearnerHandler extends Thread {
             if (packetToSend == Leader.SNAP) {
                 zxidToSend = leader.zk.getZKDatabase().getDataTreeLastProcessedZxid();
             }
+
+            // 然后向 follower 发送 DIFF 或 TRUNC消息，开始数据同步
             oa.writeRecord(new QuorumPacket(packetToSend, zxidToSend, null, null), "packet");
             bufferedOutput.flush();
             
@@ -441,7 +447,10 @@ public class LearnerHandler extends Thread {
                 oa.writeString("BenWasHere", "signature");
             }
             bufferedOutput.flush();
-            
+
+            /**
+             * leader 向learner发送数据的线程
+             */
             // Start sending packets
             new Thread() {
                 public void run() {
@@ -485,6 +494,7 @@ public class LearnerHandler extends Thread {
             //
             queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));
 
+            // Learnerhandler主逻辑循环，负责接收 follower发来的ack、ping等
             while (true) {
                 qp = new QuorumPacket();
                 ia.readRecord(qp, "packet");
@@ -578,6 +588,7 @@ public class LearnerHandler extends Thread {
             	//close the socket to make sure the 
             	//other side can see it being close
             	try {
+            	    // 发生网络io
             		sock.close();
             	} catch(IOException ie) {
             		// do nothing
@@ -593,9 +604,14 @@ public class LearnerHandler extends Thread {
         }
     }
 
+    /**
+     * 关闭follower的连接，清理资源
+     *
+     */
     public void shutdown() {
         // Send the packet of death
         try {
+            // 发送一个标记proposal， 让负责给follower发送数据的线程退出
             queuedPackets.put(proposalOfDeath);
         } catch (InterruptedException e) {
             LOG.warn("Ignoring unexpected exception", e);
@@ -607,7 +623,9 @@ public class LearnerHandler extends Thread {
         } catch (IOException e) {
             LOG.warn("Ignoring unexpected exception during socket close", e);
         }
+        // 中断LeanerHandler自己这个线程
         this.interrupt();
+        // 将对应的follower从 leader 的follower列表中移除
         leader.removeLearnerHandler(this);
     }
 
