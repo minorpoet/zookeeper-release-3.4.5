@@ -108,6 +108,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                         } else {
                             // this request came from someone else so just
                             // send the commit packet
+                            // 这种情况是，本节点并不是此次请求的直接服务节点
                             toProcess.add(r);
                         }
                     }
@@ -141,7 +142,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                                 toProcess.add(request);
                             }
                             break;
-                            // 查询类的操作 直接放到 toProcess里边去，然后交给下个 RequestProcess(FinalRequestProccesor)处理
+                            // 查询类的操作 直接放到 toProcess里边去，然后交给下个 RequestProcess(FinalRequestProcessor)处理
                         default:
                             toProcess.add(request);
                         }

@@ -746,6 +746,8 @@ public class ClientCnxn {
                 }
                 return;
             }
+
+            // 响应内容为，服务端发送过来的通知
             if (replyHdr.getXid() == -1) {
                 // -1 means notification
                 if (LOG.isDebugEnabled()) {
@@ -1241,6 +1243,7 @@ public class ClientCnxn {
                     + ", sessionid = 0x" + Long.toHexString(sessionId)
                     + ", negotiated timeout = " + negotiatedSessionTimeout
                     + (isRO ? " (READ-ONLY mode)" : ""));
+            // 当session建立完毕后 生成连接建立完毕的事件 defaultWatcher 就可以感知到
             KeeperState eventState = (isRO) ?
                     KeeperState.ConnectedReadOnly : KeeperState.SyncConnected;
             eventThread.queueEvent(new WatchedEvent(
