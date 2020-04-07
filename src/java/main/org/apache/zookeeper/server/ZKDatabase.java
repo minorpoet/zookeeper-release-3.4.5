@@ -219,7 +219,7 @@ public class ZKDatabase {
                 addCommittedProposal(r);
             }
         };
-        
+        //从快照和日志中恢复内存数据库 DataTree
         long zxid = snapLog.restore(dataTree,sessionsWithTimeouts,listener);
         initialized = true;
         return zxid;
