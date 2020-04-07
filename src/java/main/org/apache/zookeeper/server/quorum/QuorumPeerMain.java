@@ -129,7 +129,7 @@ public class QuorumPeerMain {
   
       LOG.info("Starting quorum peer");
       try {
-          // 网络连接工厂
+          // 网络连接工厂，负责和客户端建立连接
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
                                 config.getMaxClientCnxns());
@@ -137,20 +137,21 @@ public class QuorumPeerMain {
           // 一个 QuorumPeer 代表一个 zk 节点
           quorumPeer = new QuorumPeer();
           quorumPeer.setClientPortAddress(config.getClientPortAddress());
+          // 事务日志和快照处理工厂
           quorumPeer.setTxnFactory(new FileTxnSnapLog(
                       new File(config.getDataLogDir()),
                       new File(config.getDataDir())));
           quorumPeer.setQuorumPeers(config.getServers());
-          quorumPeer.setElectionType(config.getElectionAlg());
+          quorumPeer.setElectionType(config.getElectionAlg()); // 选举算法，默认是基于tcp的FastLeaderElection
           quorumPeer.setMyid(config.getServerId());
-          quorumPeer.setTickTime(config.getTickTime());
+          quorumPeer.setTickTime(config.getTickTime());  // zk的单位时间，其他时间都是基于来计量的
           quorumPeer.setMinSessionTimeout(config.getMinSessionTimeout());
           quorumPeer.setMaxSessionTimeout(config.getMaxSessionTimeout());
           quorumPeer.setInitLimit(config.getInitLimit());
           quorumPeer.setSyncLimit(config.getSyncLimit());
-          quorumPeer.setQuorumVerifier(config.getQuorumVerifier());
+          quorumPeer.setQuorumVerifier(config.getQuorumVerifier()); //默认是 QuorumMaj 过半机制
           quorumPeer.setCnxnFactory(cnxnFactory);
-          // ZKDatabase 内存数据库 存储session、datatree和log等
+          // ZKDatabase 内存数据库 存储session、datatree等
           quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
           // 是否参加选举 或只是个 observer节点
           quorumPeer.setLearnerType(config.getPeerType());
