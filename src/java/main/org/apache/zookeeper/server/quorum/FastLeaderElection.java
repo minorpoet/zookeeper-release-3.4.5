@@ -297,8 +297,8 @@ public class FastLeaderElection implements Election {
                                  * Send a notification back if the peer that sent this
                                  * message is also looking and its logical clock is
                                  * lagging behind.
-                                 * 如果消息发送的那个节点 发过来的投票周期比当前节点的小 则升级那个选票周期为当前节点的投票周期logicalclock 再发回给那个节点
-                                 * todo why?
+                                 * 如果消息发送的那个节点 发过来的投票周期比当前节点的小, 说明他参加的选举周期已经落后了，
+                                 * 把自己当前的选票发给他
                                  */
                                 if((ackstate == QuorumPeer.ServerState.LOOKING)
                                         && (n.electionEpoch < logicalclock)){
@@ -846,6 +846,7 @@ public class FastLeaderElection implements Election {
                                         logicalclock, proposedEpoch))) {
 
                             // Verify if there is any change in the proposed leader
+                            // 最后再等待一段时间接收其他节点的投票进来，如果接收到更优的选票 则进行回到循环 进行处理
                             while((n = recvqueue.poll(finalizeWait,
                                     TimeUnit.MILLISECONDS)) != null){
                                 if(totalOrderPredicate(n.leader, n.zxid, n.peerEpoch,
