@@ -364,6 +364,8 @@ public class Leader {
             cnxAcceptor.start();
             
             readyToStart = true;
+            //开始领导的时候，epoch++
+            // 这边会阻塞等待过半的follower建立网路连接后发送的第一个 Leader.FOLLOWERINFO 消息
             long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
             
             zk.setZxid(ZxidUtils.makeZxid(epoch, 0));
@@ -382,7 +384,8 @@ public class Leader {
             }
             outstandingProposals.put(newLeaderProposal.packet.getZxid(), newLeaderProposal);
             newLeaderProposal.ackSet.add(self.getId());
-            
+
+            // 等待过半followers 收到自己的leader信息(Leader.LEADERINFO)
             waitForEpochAck(self.getId(), leaderStateSummary);
             self.setCurrentEpoch(epoch);
 
@@ -464,9 +467,12 @@ public class Leader {
                     if (f.synced() && f.getLearnerType() == LearnerType.PARTICIPANT) {
                         syncedSet.add(f.getSid());
                     }
+                    // 主动和follower发送ping
                     f.ping();
                 }
 
+                // 每 tickTime 检查一次，如果少于一半的follower和自己保持连接，则关闭
+                // 不再担任leader 重新进入looking状态开始选举
               if (!tickSkip && !self.getQuorumVerifier().containsQuorum(syncedSet)) {
                 //if (!tickSkip && syncedCount < self.quorumPeers.size() / 2) {
                     // Lost quorum, shutdown

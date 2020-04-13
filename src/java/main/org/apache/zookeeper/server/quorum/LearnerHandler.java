@@ -299,11 +299,13 @@ public class LearnerHandler extends Thread {
 				}
                 ByteBuffer bbepoch = ByteBuffer.wrap(ackEpochPacket.getData());
                 ss = new StateSummary(bbepoch.getInt(), ackEpochPacket.getZxid());
+                //阻塞等待，直到收到过半follower 对 Leader.LEADERINFO 的ack消息
                 leader.waitForEpochAck(this.getSid(), ss);
             }
             peerLastZxid = ss.getLastZxid();
             
             /* the default to send to the follower */
+            // 如果follower最新事务id超过 leader中最新的500个提交，则发送快照
             int packetToSend = Leader.SNAP;
             long zxidToSend = 0;
             long leaderLastZxid = 0;
@@ -416,7 +418,7 @@ public class LearnerHandler extends Thread {
                 rl.unlock();
             }
 
-            // 先给follower 发送一个 Leader.NEWLEADER 类型的消息，表明正常开始新的周期了
+            // 先给follower 发送一个 Leader.NEWLEADER 类型的消息，表明正式开始新的周期了
              QuorumPacket newLeaderQP = new QuorumPacket(Leader.NEWLEADER,
                     ZxidUtils.makeZxid(newEpoch, 0), null, null);
              if (getVersion() < 0x10000) {
