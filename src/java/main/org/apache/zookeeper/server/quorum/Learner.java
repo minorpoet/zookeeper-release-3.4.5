@@ -420,7 +420,7 @@ public class Learner {
         ack.setZxid(ZxidUtils.makeZxid(newEpoch, 0));
         writePacket(ack, true);
         sock.setSoTimeout(self.tickTime * self.syncLimit);
-        // follower 正式启动，开始处理client的请求
+        // 与leader同步完数据后，follower 正式启动，开始处理client的请求
         zk.startup();
         // We need to log the stuff that came in between the snapshot and the uptodate
         if (zk instanceof FollowerZooKeeperServer) {

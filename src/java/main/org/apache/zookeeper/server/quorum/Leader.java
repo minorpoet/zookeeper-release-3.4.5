@@ -606,7 +606,9 @@ public class Leader {
                     }
                 }
                 return;
-            } else {
+            }
+           // 当过半follower响应了 Leader.NEWLEADER 的消息，leader才正式启动
+            else {
                 lastCommitted = zxid;
                 LOG.info("Have quorum of supporters; starting up and setting last processed zxid: 0x{}",
                         Long.toHexString(zk.getZxid()));

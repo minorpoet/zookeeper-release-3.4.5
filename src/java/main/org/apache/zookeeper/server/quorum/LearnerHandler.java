@@ -484,6 +484,9 @@ public class LearnerHandler extends Thread {
 
             /*
              * Wait until leader starts up
+             * 阻塞等待，直到 leader 正式启动
+             * leader.processAck(this.sid, qp.getZxid(), sock.getLocalSocketAddress()); 等待过半follower响应前面发NEWLEADER的消息
+             *
              */
             synchronized(leader.zk){
                 while(!leader.zk.isRunning() && !this.isInterrupted()){
@@ -496,7 +499,7 @@ public class LearnerHandler extends Thread {
             //
             queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));
 
-            // Learnerhandler主逻辑循环，负责接收 follower发来的ack、ping等
+            // Learnerhandler主逻辑循环，负责接收follower发来的ack、ping等
             while (true) {
                 qp = new QuorumPacket();
                 ia.readRecord(qp, "packet");
