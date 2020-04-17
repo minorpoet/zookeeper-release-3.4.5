@@ -461,6 +461,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                         .getEphemerals(request.sessionId);
                 synchronized (zks.outstandingChanges) {
                     for (ChangeRecord c : zks.outstandingChanges) {
+                        // 如果是非持久节点 -> 临时节点
                         if (c.stat == null) {
                             // Doing a delete
                             es.remove(c.path);
