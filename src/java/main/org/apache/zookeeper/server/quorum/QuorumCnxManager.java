@@ -444,7 +444,9 @@ public class QuorumCnxManager {
      *            Reference to socket
      */
     private void setSockOpts(Socket sock) throws SocketException {
+        // 如果不设置成 NoDelay ，每次通过这个socket的时候不会及时发送出去，而是可能等待几次一起打个打包才发出去
         sock.setTcpNoDelay(true);
+        // 通过输入流 read() 读取网络数据,如果没数据，或阻塞等待 timeout之后会抛出 SocketTimeoutException异常
         sock.setSoTimeout(self.tickTime * self.syncLimit);
     }
 
@@ -492,6 +494,8 @@ public class QuorumCnxManager {
             while((!shutdown) && (numRetries < 3)){
                 try {
                     ss = new ServerSocket();
+                    //当tcp连接断开的时候，连接可能还处于timeout状态未释放，这个时候绑定同一个端口会失败
+                    // 在绑定之前， 把连接地址设置为可重用，即使连接处于timeout状态也能绑定
                     ss.setReuseAddress(true);
                     int port = self.quorumPeers.get(self.getId()).electionAddr
                             .getPort();
