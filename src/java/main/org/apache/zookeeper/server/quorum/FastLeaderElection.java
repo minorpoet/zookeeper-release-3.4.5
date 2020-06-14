@@ -815,6 +815,7 @@ public class FastLeaderElection implements Election {
                             sendNotifications();
                         }
                         // 如果接收到的投票周期小于自己的，则忽略
+                        // 因为 recvWork 在接收到的时候就已经把自己的选票发出去了，这边不用再处理
                         else if (n.electionEpoch < logicalclock) {
                             if(LOG.isDebugEnabled()){
                                 LOG.debug("Notification election epoch is smaller than logicalclock. n.electionEpoch = 0x"
